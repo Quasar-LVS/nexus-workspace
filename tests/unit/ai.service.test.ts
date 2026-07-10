@@ -29,6 +29,8 @@ describe("AiService Unit Tests", () => {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       neq: vi.fn().mockReturnThis(),
+      is: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
       like: vi.fn().mockReturnThis(),
       gte: vi.fn().mockReturnThis(),
       gt: vi.fn().mockReturnThis(),

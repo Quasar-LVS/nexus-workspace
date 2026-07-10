@@ -14,7 +14,7 @@ import { ValidationError, DatabaseError, NotFoundError, ForbiddenError } from ".
 import { permissionService } from "./permission.service";
 import { logger } from "../utils/logger";
 import { Workspace } from "@/types";
-import { currentUser } from "@clerk/nextjs/server";
+import { currentUser, clerkClient } from "@clerk/nextjs/server";
 
 export class WorkspaceService {
 
@@ -448,7 +448,27 @@ export class WorkspaceService {
       throw new DatabaseError("Error creating workspace invitation.", inviteError);
     }
 
-    // 3. Log invite activity
+    // 3. Dispatch Clerk invitation to trigger email delivery
+    try {
+      const clerk = await clerkClient();
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      await clerk.invitations.createInvitation({
+        emailAddress: payload.email,
+        redirectUrl: `${appUrl}/workspace/join?token=${token}`,
+        publicMetadata: {
+          workspaceId: payload.workspaceId,
+          role: payload.role,
+          invitationToken: token
+        },
+        ignoreExisting: true
+      });
+      logger.info(`Successfully dispatched Clerk invitation email to ${payload.email}`, context);
+    } catch (clerkErr: any) {
+      logger.error("Failed to send Clerk invitation email", clerkErr, context);
+      throw new ValidationError(`Failed to send invitation email: ${clerkErr.message}`);
+    }
+
+    // 4. Log invite activity
     await this.logActivity(
       client,
       payload.workspaceId,

@@ -115,6 +115,15 @@ export class AiService {
       }
     }
 
+    // Gather active workspace channels first to query messages under them
+    const { data: workspaceChannels } = await client
+      .from("channels")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .is("deleted_at", null);
+    
+    const channelIds = (workspaceChannels || []).map((c: any) => c.id);
+
     // Gather workspace database context
     const [
       { data: channels },
@@ -124,7 +133,9 @@ export class AiService {
       { data: members }
     ] = await Promise.all([
       client.from("channels").select("name, description").eq("workspace_id", workspaceId).limit(5),
-      client.from("messages").select("content, created_at").eq("workspace_id", workspaceId).order("created_at", { ascending: false }).limit(20),
+      channelIds.length > 0
+        ? client.from("messages").select("content, created_at").in("channel_id", channelIds).order("created_at", { ascending: false }).limit(20)
+        : Promise.resolve({ data: [], error: null }),
       client.from("projects").select("name").eq("workspace_id", workspaceId).limit(5),
       client.from("tasks").select("title, status, priority").eq("workspace_id", workspaceId).limit(10),
       client.from("workspace_members").select("profile_id, role").eq("workspace_id", workspaceId).limit(10)
@@ -239,6 +250,15 @@ export class AiService {
   ): Promise<ReadableStream<string>> {
     const client = createDbAdminClient();
 
+    // Gather active workspace channels first
+    const { data: workspaceChannels } = await client
+      .from("channels")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .is("deleted_at", null);
+    
+    const channelIds = (workspaceChannels || []).map((c: any) => c.id);
+
     // Query databases for keyword matches
     const [
       { data: tasks },
@@ -247,7 +267,9 @@ export class AiService {
     ] = await Promise.all([
       client.from("tasks").select("title, status").eq("workspace_id", workspaceId).ilike("title", `%${query.replace(/search|show|find/g, "").trim()}%`).limit(5),
       client.from("channels").select("name").eq("workspace_id", workspaceId).ilike("name", `%${query.replace(/search|show|find/g, "").trim()}%`).limit(5),
-      client.from("messages").select("content").eq("workspace_id", workspaceId).ilike("content", `%${query.replace(/search|show|find/g, "").trim()}%`).limit(5)
+      channelIds.length > 0
+        ? client.from("messages").select("content").in("channel_id", channelIds).ilike("content", `%${query.replace(/search|show|find/g, "").trim()}%`).limit(5)
+        : Promise.resolve({ data: [], error: null })
     ]);
 
     const formattedHits = [
@@ -617,6 +639,15 @@ Return ONLY the rewritten text, without any preambles, comments, explanation or 
     const client = createDbAdminClient();
     const cleanTerm = query.replace(/search|find|show/gi, "").trim();
 
+    // Gather active workspace channels first
+    const { data: workspaceChannels } = await client
+      .from("channels")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .is("deleted_at", null);
+    
+    const channelIds = (workspaceChannels || []).map((c: any) => c.id);
+
     const [
       { data: tasks },
       { data: channels },
@@ -624,7 +655,9 @@ Return ONLY the rewritten text, without any preambles, comments, explanation or 
     ] = await Promise.all([
       client.from("tasks").select("title, status, priority, due_date").eq("workspace_id", workspaceId).ilike("title", `%${cleanTerm}%`).limit(10),
       client.from("channels").select("name, description").eq("workspace_id", workspaceId).ilike("name", `%${cleanTerm}%`).limit(5),
-      client.from("messages").select("content, created_at, channels(name)").eq("workspace_id", workspaceId).ilike("content", `%${cleanTerm}%`).limit(10)
+      channelIds.length > 0
+        ? client.from("messages").select("content, created_at, channels(name)").in("channel_id", channelIds).ilike("content", `%${cleanTerm}%`).limit(10)
+        : Promise.resolve({ data: [], error: null })
     ]);
 
     const formattedHits = [

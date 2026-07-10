@@ -17,6 +17,16 @@ vi.mock("../../lib/backend/services/permission.service", () => ({
   },
 }));
 
+vi.mock("@clerk/nextjs/server", () => ({
+  auth: vi.fn(),
+  currentUser: vi.fn(),
+  clerkClient: vi.fn().mockResolvedValue({
+    invitations: {
+      createInvitation: vi.fn().mockResolvedValue({}),
+    },
+  }),
+}));
+
 const VALID_UUID = "123e4567-e89b-12d3-a456-426614174000";
 
 describe("WorkspaceService Unit Tests", () => {
@@ -103,6 +113,30 @@ describe("WorkspaceService Unit Tests", () => {
 
       expect(result.workspaceId).toBe(VALID_UUID);
       expect(result.workspaceName).toBe("Test Workspace");
+    });
+  });
+
+  describe("inviteMember", () => {
+    it("should successfully save invitation token and trigger Clerk email dispatch", async () => {
+      mockAdminClient.single.mockResolvedValueOnce({
+        data: {
+          id: VALID_UUID,
+          workspace_id: VALID_UUID,
+          email: "new_invitee@example.com",
+          role: "member",
+        },
+        error: null,
+      });
+
+      const result = await workspaceService.inviteMember("user_123", {
+        workspaceId: VALID_UUID,
+        email: "new_invitee@example.com",
+        role: "member",
+      });
+
+      expect(result.inviteId).toBe(VALID_UUID);
+      expect(result.token).toBeDefined();
+      expect(mockAdminClient.from).toHaveBeenCalledWith("workspace_invitations");
     });
   });
 });

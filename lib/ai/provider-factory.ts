@@ -16,7 +16,18 @@ export class ProviderFactory {
   static getProvider(providerType: string): AIProvider {
     const type = (providerType || "gemini").toLowerCase().trim();
 
-    switch (type) {
+    let resolvedType = type;
+    if (type === "gemini" && !process.env.GEMINI_API_KEY && !process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
+      resolvedType = "mock";
+    } else if (type === "openai" && !process.env.OPENAI_API_KEY) {
+      resolvedType = "mock";
+    } else if (type === "claude" && !process.env.ANTHROPIC_API_KEY) {
+      resolvedType = "mock";
+    } else if (type === "kimi" && !process.env.KIMI_API_KEY) {
+      resolvedType = "mock";
+    }
+
+    switch (resolvedType) {
       case "gemini":
         return new GeminiProvider();
       case "openai":
