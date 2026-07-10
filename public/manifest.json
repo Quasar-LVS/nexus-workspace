@@ -1,0 +1,24 @@
+{
+  "name": "Nexus - AI Workplace OS",
+  "short_name": "Nexus",
+  "description": "AI-powered workplace operating system combining communication, projects, and Nova AI.",
+  "theme_color": "#09090b",
+  "background_color": "#09090b",
+  "display": "standalone",
+  "orientation": "any",
+  "start_url": "/dashboard",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
